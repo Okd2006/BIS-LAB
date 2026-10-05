@@ -1,0 +1,119 @@
+import random
+
+# Input
+n = int(input("Enter number of batteries: "))
+required = []
+
+for i in range(n):
+    required.append(float(input(f"Required charge for Battery {i+1}: ")))
+
+slots = int(input("Enter number of time slots: "))
+
+price = []
+for i in range(slots):
+    price.append(float(input(f"Price of Slot {i+1}: ")))
+
+POP_SIZE = 20
+GENERATIONS = 50
+MUTATION_RATE = 0.1
+
+
+# Create solution
+def create():
+    schedule = []
+
+    for i in range(n):
+        x = [random.random() for _ in range(slots)]
+        total = sum(x)
+
+        schedule.append([
+            v / total * required[i]
+            for v in x
+        ])
+
+    return schedule
+
+
+# Fitness
+def fitness(s):
+    cost = 0
+
+    for i in range(n):
+        for j in range(slots):
+            cost += s[i][j] * price[j]
+
+    return -cost
+
+
+# Mutation
+def mutate(s):
+    i = random.randrange(n)
+    j = random.randrange(slots)
+
+    s[i][j] += random.uniform(-2, 2)
+
+    if s[i][j] < 0:
+        s[i][j] = 0
+
+    total = sum(s[i])
+
+    for j in range(slots):
+        s[i][j] = s[i][j] / total * required[i]
+
+    return s
+
+
+# Genetic Algorithm
+population = [create() for _ in range(POP_SIZE)]
+
+for generation in range(GENERATIONS):
+
+    population.sort(key=fitness, reverse=True)
+
+    parents = population[:POP_SIZE // 2]
+
+    new_population = parents[:]
+
+    while len(new_population) < POP_SIZE:
+
+        p1 = random.choice(parents)
+        p2 = random.choice(parents)
+
+        child = []
+
+        for i in range(n):
+            point = random.randint(1, slots - 1)
+            row = p1[i][:point] + p2[i][point:]
+
+            total = sum(row)
+
+            row = [
+                x / total * required[i]
+                for x in row
+            ]
+
+            child.append(row)
+
+        if random.random() < MUTATION_RATE:
+            child = mutate(child)
+
+        new_population.append(child)
+
+    population = new_population
+
+
+# Best solution
+best = max(population, key=fitness)
+
+print("\n===== BEST CHARGING SCHEDULE =====")
+
+for i in range(n):
+    print(f"\nBattery {i+1}:")
+
+    for j in range(slots):
+        print(
+            f"Slot {j+1}: "
+            f"{best[i][j]:.2f} kWh"
+        )
+
+print(f"\nMinimum Cost: ₹{-fitness(best):.2f}")
